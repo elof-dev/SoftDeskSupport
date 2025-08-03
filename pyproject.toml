@@ -1,0 +1,19 @@
+[project]
+name = "softdesk"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "elof-dev",email = "elodie.fourcade65@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "django (>=5.2.4,<6.0.0)",
+    "djangorestframework",
+    "djangorestframework-simplejwt"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
