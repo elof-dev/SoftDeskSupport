@@ -40,6 +40,9 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'softdesk',
+    'users',
+
+
 ]
 
 MIDDLEWARE = [
