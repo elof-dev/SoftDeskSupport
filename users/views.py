@@ -1,14 +1,24 @@
 from rest_framework import viewsets
 from .models import User
 from .serializers import UserSerializer
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, permissions
 
+class IsSelfOrAdmin(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        # Autorise si l'utilisateur est lui-même ou admin
+        return obj == request.user or request.user.is_staff
+    
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return [IsSelfOrAdmin()]
+        if self.action == 'create':
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
         # RGPD : Vérification de l'âge
