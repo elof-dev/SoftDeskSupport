@@ -2,23 +2,38 @@ from rest_framework import viewsets, permissions
 from .models import Project, Contributor, Issue, Comment
 from .serializers import ProjectSerializer, ContributorSerializer, IssueSerializer, CommentSerializer
 
+
+class IsAuthorOrReadOnly(permissions.BasePermission):
+    """
+    Lecture autorisée à tous les utilisateurs authentifiés.
+    Modification/suppression réservée à l'auteur de la ressource.
+    """
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        if hasattr(obj, 'author'):
+            return obj.author == request.user
+        return False
+    
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all()
     serializer_class = ProjectSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = Project.objects.all()
+    permission_classes = [IsAuthorOrReadOnly]
 
 class ContributorViewSet(viewsets.ModelViewSet):
-    queryset = Contributor.objects.all()
     serializer_class = ContributorSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = Contributor.objects.all()
+    permission_classes = [IsAuthorOrReadOnly]
 
 class IssueViewSet(viewsets.ModelViewSet):
-    queryset = Issue.objects.all()
     serializer_class = IssueSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = Issue.objects.all()
+    permission_classes = [IsAuthorOrReadOnly]
 
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
+    queryset = Comment.objects.all()
+    permission_classes = [IsAuthorOrReadOnly]

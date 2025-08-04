@@ -54,46 +54,39 @@ class ContributorSerializer(serializers.ModelSerializer):
         return data
 
 class IssueSerializer(serializers.ModelSerializer):
+    project = serializers.PrimaryKeyRelatedField(queryset=Project.objects.none())
+
     class Meta:
         model = Issue
         fields = '__all__'
         read_only_fields = ['author']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        user = self.context['request'].user
+        project_ids = Contributor.objects.filter(user=user).values_list('project_id', flat=True)
+        self.fields['project'].queryset = Project.objects.filter(id__in=project_ids)
+
     def create(self, validated_data):
         user = self.context['request'].user
         return Issue.objects.create(author=user, **validated_data)
 
-    def validate(self, data):
-        # Vérifie que l'assignee est bien contributeur du projet
-        project = data.get('project') or self.instance.project
-        assignee = data.get('assignee')
-        if assignee and not Contributor.objects.filter(user=assignee, project=project).exists():
-            raise serializers.ValidationError("L'utilisateur assigné doit être contributeur du projet.")
-        return data
 
 class CommentSerializer(serializers.ModelSerializer):
-    issue_url = serializers.SerializerMethodField(read_only=True)
-    
+    issue = serializers.PrimaryKeyRelatedField(queryset=Issue.objects.none())
+
     class Meta:
         model = Comment
         fields = '__all__'
         read_only_fields = ['author', 'uuid']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        user = self.context['request'].user
+        project_ids = Contributor.objects.filter(user=user).values_list('project_id', flat=True)
+        issue_ids = Issue.objects.filter(project_id__in=project_ids).values_list('id', flat=True)
+        self.fields['issue'].queryset = Issue.objects.filter(id__in=issue_ids)
+
     def create(self, validated_data):
         user = self.context['request'].user
         return Comment.objects.create(author=user, **validated_data)
-
-    def validate(self, data):
-        # Vérifie que l'auteur (utilisateur connecté) est contributeur du projet lié à l'issue
-        issue = data.get('issue') or self.instance.issue
-        author = self.context['request'].user
-        project = issue.project
-        if not Contributor.objects.filter(user=author, project=project).exists():
-            raise serializers.ValidationError("L'auteur doit être contributeur du projet.")
-        return data
-    
-    def get_issue_url(self, obj):
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(f'/api/issues/{obj.issue.id}/')
-        return f'/api/issues/{obj.issue.id}/'
