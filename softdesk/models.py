@@ -1,5 +1,6 @@
 from django.db import models
 from users.models import User
+from django.conf import settings
 
 class Project(models.Model):
     PROJECT_TYPE_CHOICES = [
@@ -12,22 +13,11 @@ class Project(models.Model):
     description = models.TextField()
     type = models.CharField(max_length=20, choices=PROJECT_TYPE_CHOICES)  # menu déroulant
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects_created')
+    contributors = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='projects_contributed')
     created_time = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
-
-class Contributor(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    role = models.CharField(max_length=50, default='contributor')  # ex: 'auteur', 'contributeur'
-    permission = models.CharField(max_length=50, default='read')   # ex: 'read', 'write'
-
-    class Meta:
-        unique_together = ('user', 'project')
-
-    def __str__(self):
-        return f"{self.user.username} sur {self.project.name}"
 
 class Issue(models.Model):
     STATUS_CHOICES = [

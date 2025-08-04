@@ -1,57 +1,25 @@
 from rest_framework import serializers
-from .models import Project, Contributor, Issue, Comment, User
+from .models import Project, Issue, Comment, User
 
 class ProjectSerializer(serializers.ModelSerializer):
-    contributors = serializers.SerializerMethodField()
+    contributors = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=User.objects.filter(is_staff=False, is_superuser=False)
+    )
     author = serializers.CharField(source='author.username', read_only=True)
 
     class Meta:
         model = Project
-        fields = ['id', 'name', 'description', 'type', 'author', 'created_time', 'contributors']
-        read_only_fields = ['author', 'created_time', 'contributors']
+        fields = ['id', 'name', 'description', 'type', 'author', 'contributors', 'created_time']
+        read_only_fields = ['author', 'created_time']
 
     def create(self, validated_data):
+        contributors = validated_data.pop('contributors', [])
         user = self.context['request'].user
         project = Project.objects.create(author=user, **validated_data)
-        Contributor.objects.create(user=user, project=project, role='author', permission='write')
+        project.contributors.set(contributors + [user])  # L'auteur est aussi contributeur
         return project
-    
-    def get_contributors(self, obj):
-        contributors = Contributor.objects.filter(project=obj)
-        # On retourne une liste d'utilisateurs (ou d'IDs, ou de usernames selon le besoin)
-        return [
-            {
-                "id": c.user.id,
-                "username": c.user.username,
-                "role": c.role,
-                "permission": c.permission
-            }
-            for c in contributors
-        ]
 
-class ContributorSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(is_staff=False, is_superuser=False),
-    )
-
-    class Meta:
-        model = Contributor
-        fields = ['id', 'user', 'project']  # On n'expose plus role ni permission
-
-    def create(self, validated_data):
-        # On fixe automatiquement le rôle et la permission
-        return Contributor.objects.create(
-            **validated_data,
-            role='contributor',
-            permission='write'
-        )
-
-    def validate(self, data):
-        project = data.get('project') or self.instance.project
-        user = data.get('user') or self.instance.user
-        if user == project.author:
-            raise serializers.ValidationError("L'auteur du projet est déjà contributeur et ne peut pas être ajouté à nouveau.")
-        return data
 
 class IssueSerializer(serializers.ModelSerializer):
     project = serializers.PrimaryKeyRelatedField(queryset=Project.objects.none())
@@ -64,8 +32,7 @@ class IssueSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         user = self.context['request'].user
-        project_ids = Contributor.objects.filter(user=user).values_list('project_id', flat=True)
-        self.fields['project'].queryset = Project.objects.filter(id__in=project_ids)
+        self.fields['project'].queryset = Project.objects.filter(contributors=user)
 
     def create(self, validated_data):
         user = self.context['request'].user
@@ -83,8 +50,7 @@ class CommentSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         user = self.context['request'].user
-        project_ids = Contributor.objects.filter(user=user).values_list('project_id', flat=True)
-        issue_ids = Issue.objects.filter(project_id__in=project_ids).values_list('id', flat=True)
+        issue_ids = Issue.objects.filter(project__contributors=user).values_list('id', flat=True)
         self.fields['issue'].queryset = Issue.objects.filter(id__in=issue_ids)
 
     def create(self, validated_data):
