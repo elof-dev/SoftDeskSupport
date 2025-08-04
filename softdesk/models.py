@@ -2,9 +2,15 @@ from django.db import models
 from users.models import User
 
 class Project(models.Model):
+    PROJECT_TYPE_CHOICES = [
+        ('back-end', 'Back-end'),
+        ('front-end', 'Front-end'),
+        ('iOS', 'iOS'),
+        ('Android', 'Android'),
+    ]
     name = models.CharField(max_length=128)
     description = models.TextField()
-    type = models.CharField(max_length=50)  # ex: 'logiciel', 'application mobile', etc.
+    type = models.CharField(max_length=20, choices=PROJECT_TYPE_CHOICES)  # menu déroulant
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects_created')
     created_time = models.DateTimeField(auto_now_add=True)
 

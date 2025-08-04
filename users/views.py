@@ -21,6 +21,11 @@ class UserViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return Response(
+                {"error": "Vous êtes déjà connecté(e). Déconnectez-vous pour créer un nouveau compte."},
+            status=status.HTTP_403_FORBIDDEN
+        )
         # RGPD : Vérification de l'âge
         age = request.data.get('age')
         if age is not None and int(age) < 15:
