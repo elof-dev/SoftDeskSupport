@@ -66,6 +66,14 @@ class Comment(models.Model):
     description = models.TextField()
     created_time = models.DateTimeField(auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
+    custom_id = models.CharField(max_length=255, unique=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)  # On sauvegarde d'abord pour avoir accès à l'ID et aux relations
+        if not self.custom_id:
+            date_str = self.issue.created_time.strftime('%d%m%Y')
+            self.custom_id = f"{self.issue.project.name}_{self.issue.title}_{date_str}".replace(' ', '_')
+            super().save(update_fields=['custom_id'])
 
     def __str__(self):
         return f"Commentaire de {self.author.username} sur {self.issue.title}"
