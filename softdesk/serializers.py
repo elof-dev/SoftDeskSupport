@@ -2,10 +2,6 @@ from rest_framework import serializers
 from .models import Project, Issue, Comment, User
 
 class ProjectSerializer(serializers.ModelSerializer):
-    contributors = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=User.objects.filter(is_staff=False, is_superuser=False)
-    )
     author = serializers.CharField(source='author.username', read_only=True)
 
     class Meta:
@@ -17,42 +13,43 @@ class ProjectSerializer(serializers.ModelSerializer):
         contributors = validated_data.pop('contributors', [])
         user = self.context['request'].user
         project = Project.objects.create(author=user, **validated_data)
-        project.contributors.set(contributors + [user])  # L'auteur est aussi contributeur
+        project.contributors.set(contributors + [user]) 
         return project
 
-
 class IssueSerializer(serializers.ModelSerializer):
-    project = serializers.PrimaryKeyRelatedField(queryset=Project.objects.none())
+    assignee = serializers.PrimaryKeyRelatedField(queryset=User.objects.none())
+    project = serializers.PrimaryKeyRelatedField(queryset=Project.objects.all())
 
     class Meta:
         model = Issue
         fields = '__all__'
-        read_only_fields = ['author']
+        read_only_fields = ['author', 'project']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        user = self.context['request'].user
-        self.fields['project'].queryset = Project.objects.filter(contributors=user)
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        return Issue.objects.create(author=user, **validated_data)
-
+        project_id = self.context.get('project_id')
+        if project_id:
+            try:
+                project = Project.objects.get(pk=project_id)
+                self.fields['assignee'].queryset = project.contributors.all()
+                self.fields['project'].initial = project_id
+                self.fields['project'].read_only = True 
+            except Project.DoesNotExist:
+                self.fields['assignee'].queryset = User.objects.none()
+        else:
+            self.fields['assignee'].queryset = User.objects.none()
 
 class CommentSerializer(serializers.ModelSerializer):
-    issue = serializers.PrimaryKeyRelatedField(queryset=Issue.objects.none())
+    issue = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Comment
         fields = '__all__'
-        read_only_fields = ['author', 'uuid']
+        read_only_fields = ['author', 'issue']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        user = self.context['request'].user
-        issue_ids = Issue.objects.filter(project__contributors=user).values_list('id', flat=True)
-        self.fields['issue'].queryset = Issue.objects.filter(id__in=issue_ids)
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        return Comment.objects.create(author=user, **validated_data)
+        issue_id = self.context.get('issue_id')
+        if issue_id:
+            self.fields['issue'].initial = issue_id
+            self.fields['issue'].initial = issue_id

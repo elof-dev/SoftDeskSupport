@@ -11,7 +11,7 @@ class Project(models.Model):
     ]
     name = models.CharField(max_length=128)
     description = models.TextField()
-    type = models.CharField(max_length=20, choices=PROJECT_TYPE_CHOICES)  # menu déroulant
+    type = models.CharField(max_length=20, choices=PROJECT_TYPE_CHOICES) 
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects_created')
     contributors = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='projects_contributed')
     created_time = models.DateTimeField(auto_now_add=True)
@@ -59,7 +59,7 @@ class Comment(models.Model):
     custom_id = models.CharField(max_length=255, unique=True, editable=False)
 
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)  # On sauvegarde d'abord pour avoir accès à l'ID et aux relations
+        super().save(*args, **kwargs) 
         if not self.custom_id:
             date_str = self.issue.created_time.strftime('%d%m%Y')
             self.custom_id = f"{self.issue.project.name}_{self.issue.title}_{date_str}".replace(' ', '_')
