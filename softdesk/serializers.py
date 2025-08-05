@@ -52,4 +52,3 @@ class CommentSerializer(serializers.ModelSerializer):
         issue_id = self.context.get('issue_id')
         if issue_id:
             self.fields['issue'].initial = issue_id
-            self.fields['issue'].initial = issue_id

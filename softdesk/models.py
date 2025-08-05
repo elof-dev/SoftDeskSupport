@@ -56,7 +56,7 @@ class Comment(models.Model):
     description = models.TextField()
     created_time = models.DateTimeField(auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
-    custom_id = models.CharField(max_length=255, unique=True, editable=False)
+    custom_id = models.CharField(max_length=100, unique=True, editable=False)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs) 

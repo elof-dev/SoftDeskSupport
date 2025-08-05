@@ -26,11 +26,3 @@ class UserViewSet(viewsets.ModelViewSet):
                 {"error": "Vous êtes déjà connecté(e). Déconnectez-vous pour créer un nouveau compte."},
             status=status.HTTP_403_FORBIDDEN
         )
-        # RGPD : Vérification de l'âge
-        age = request.data.get('age')
-        if age is not None and int(age) < 15:
-            return Response(
-                {"error": "Vous devez avoir au moins 15 ans pour vous inscrire."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        return super().create(request, *args, **kwargs)
