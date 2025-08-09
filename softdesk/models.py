@@ -1,9 +1,8 @@
 from django.db import models
 from users.models import User
-from django.conf import settings
 
 class Project(models.Model):
-    PROJECT_TYPE_CHOICES = [
+    TYPE_CHOICES = [
         ('back-end', 'Back-end'),
         ('front-end', 'Front-end'),
         ('iOS', 'iOS'),
@@ -11,10 +10,11 @@ class Project(models.Model):
     ]
     name = models.CharField(max_length=128)
     description = models.TextField()
-    type = models.CharField(max_length=20, choices=PROJECT_TYPE_CHOICES) 
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects_created')
-    contributors = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='projects_contributed')
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects_authored')
+    contributors = models.ManyToManyField(User, related_name='projects_contributed')
     created_time = models.DateTimeField(auto_now_add=True)
+    is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -35,7 +35,6 @@ class Issue(models.Model):
         ('tâche', 'Tâche'),
         ('amélioration', 'Amélioration'),
     ]
-
     title = models.CharField(max_length=128)
     description = models.TextField()
     tag = models.CharField(max_length=20, choices=TAG_CHOICES)
@@ -56,14 +55,6 @@ class Comment(models.Model):
     description = models.TextField()
     created_time = models.DateTimeField(auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
-    custom_id = models.CharField(max_length=100, unique=True, editable=False)
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs) 
-        if not self.custom_id:
-            date_str = self.issue.created_time.strftime('%d%m%Y')
-            self.custom_id = f"{self.issue.project.name}_{self.issue.title}_{date_str}".replace(' ', '_')
-            super().save(update_fields=['custom_id'])
 
     def __str__(self):
-        return f"Commentaire de {self.author.username} sur {self.issue.title}"
+        return f"Comment by {self.author} on {self.issue}"
