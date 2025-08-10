@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Project, Issue, Comment, User
+from .models import Project, Issue, Comment
+from users.models import User
 
 class ProjectSerializer(serializers.ModelSerializer):
     author = serializers.ReadOnlyField(source='author.username')
@@ -12,7 +13,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ['id', 'name', 'description', 'type', 'author', 'contributors', 'created_time']
-        read_only_fields = ['author', 'created_time', 'updated_time']
+        read_only_fields = ['author', 'created_time']
 
     def create(self, validated_data):
         contributors = validated_data.pop('contributors', [])
@@ -72,4 +73,4 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = '__all__'
-        read_only_fields = ['author', 'issue', 'project', 'created_time', 'updated_time']
+        read_only_fields = ['author', 'issue', 'created_time', 'updated_time']
