@@ -1,6 +1,9 @@
 from rest_framework import viewsets
 from .models import Project, Issue, Comment
-from .serializers import ProjectSerializer, IssueSerializer, CommentSerializer
+from .serializers import (
+    ProjectSerializer, IssueSerializer, CommentSerializer,
+    ProjectListSerializer, IssueListSerializer, CommentSerializer
+)
 from .permissions import IsUser, IsProjectContributor, IsAuthor
 from .mixins import ParentLookupMixin
 from django.db.models import Q
@@ -8,13 +11,23 @@ from django.db.models import Q
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProjectListSerializer
+        # retrieve/create/update/destroy -> serializer complet
+        return ProjectSerializer
+
     def get_queryset(self):
         user = self.request.user
-        return Project.objects.filter(
-            is_deleted=False
-        ).filter(
-            Q(author=user) | Q(contributors=user)
-        ).distinct()
+        return (
+            Project.objects
+            .filter(is_deleted=False)
+            .filter(Q(author=user) | Q(contributors=user))
+            .select_related('author')           # FK
+            .prefetch_related('contributors')   # M2M
+            .order_by('-created_time', 'id')     # ordre stable
+            .distinct()
+        )
 
     def get_permissions(self):
         if self.action == 'create':
@@ -35,17 +48,22 @@ class IssueViewSet(ParentLookupMixin, viewsets.ModelViewSet):
     parent_model = Project
     parent_attribute = 'project'
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return IssueListSerializer
+        return IssueSerializer
+
     def get_queryset(self):
         user = self.request.user
         project_id = self.request.query_params.get('project')
-        qs = Issue.objects.all()
+        queryset = Issue.objects.select_related('project', 'author', 'assignee')  # FK optimisés
         if project_id:
-            qs = qs.filter(project_id=project_id)
-        qs = qs.filter(
+            queryset = queryset.filter(project_id=project_id)
+        queryset = queryset.filter(
             Q(project__author=user) | Q(project__contributors=user),
             project__is_deleted=False
-        ).distinct()
-        return qs
+        ).order_by('-created_time', 'id').distinct()
+        return queryset
 
     def get_permissions(self):
         if self.action == 'create':
@@ -62,17 +80,22 @@ class CommentViewSet(ParentLookupMixin, viewsets.ModelViewSet):
     parent_model = Issue
     parent_attribute = 'issue'
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return CommentSerializer
+        return CommentSerializer
+
     def get_queryset(self):
         user = self.request.user
         issue_id = self.request.query_params.get('issue')
-        qs = Comment.objects.all()
+        queryset = Comment.objects.select_related('issue', 'author', 'issue__project')  # FK + chainé
         if issue_id:
-            qs = qs.filter(issue_id=issue_id)
-        qs = qs.filter(
+            queryset = queryset.filter(issue_id=issue_id)
+        queryset = queryset.filter(
             Q(issue__project__author=user) | Q(issue__project__contributors=user),
             issue__project__is_deleted=False
-        ).distinct()
-        return qs
+        ).order_by('-created_time', 'id').distinct()
+        return queryset
 
     def get_permissions(self):
         if self.action == 'create':

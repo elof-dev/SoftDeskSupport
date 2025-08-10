@@ -34,6 +34,13 @@ class ProjectSerializer(serializers.ModelSerializer):
             instance.contributors.set(contributors)
         return instance
 
+class ProjectListSerializer(serializers.ModelSerializer):
+    author = serializers.ReadOnlyField(source='author.username')
+
+    class Meta:
+        model = Project
+        fields = ['id', 'name', 'type', 'author']
+
 class IssueSerializer(serializers.ModelSerializer):
     assignee = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.none(),
@@ -66,11 +73,20 @@ class IssueSerializer(serializers.ModelSerializer):
         else:
             self.fields['assignee'].queryset = User.objects.none()
 
+class IssueListSerializer(serializers.ModelSerializer):
+    project = serializers.PrimaryKeyRelatedField(read_only=True)
+    author = serializers.ReadOnlyField(source='author.username')
+    assignee = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = Issue
+        fields = ['id', 'title', 'status', 'project', 'author', 'assignee']
+
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.ReadOnlyField(source='author.username')
     issue = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Comment
-        fields = '__all__'
+        fields = ['id', 'author', 'issue', 'description']
         read_only_fields = ['author', 'issue', 'created_time', 'updated_time']
