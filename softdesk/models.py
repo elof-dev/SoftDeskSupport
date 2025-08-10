@@ -1,3 +1,4 @@
+"""Modèles métier de l'app SoftDesk (Project, Issue, Comment)"""
 from django.db import models
 from users.models import User
 

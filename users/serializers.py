@@ -2,6 +2,10 @@ from rest_framework import serializers
 from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
+    """
+    - password: write-only (hashé via create_user)
+    - birth_date: validation de l'âge >= 15 ans
+    """
     class Meta:
         model = User
         fields = [
@@ -16,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def validate_birth_date(self, value):
+        """Vérifie que l'utilisateur a au moins 15 ans."""
         from datetime import date, timedelta
         today = date.today()
         age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
@@ -24,5 +29,6 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        """Crée l'utilisateur en hashant le mot de passe (create_user)."""
         user = User.objects.create_user(**validated_data)
         return user

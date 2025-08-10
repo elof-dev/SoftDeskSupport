@@ -1,4 +1,11 @@
+"""Serializers de l'App SoftDesk
+
+- Exposent des champs lisibles (ex: author.username) et protègent les champs read-only.
+- Appliquent des règles d'intégrité métier côté sérialisation (ex: assignee limité aux contributeurs).
+- Fournissent des versions "liste" plus légères pour réduire la charge réseau.
+"""
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 from .models import Project, Issue, Comment
 from users.models import User
 
@@ -16,6 +23,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only_fields = ['author', 'created_time']
 
     def create(self, validated_data):
+        """Crée un projet et ajoute l'auteur aux contributeurs"""
         contributors = validated_data.pop('contributors', [])
         user = self.context['request'].user
         project = Project.objects.create(author=user, **validated_data)
@@ -23,6 +31,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         return project
 
     def update(self, instance, validated_data):
+        """Met à jour le projet et garantit que l'auteur reste contributeur, même s'il n'est pas rajouté dans les contributeurs"""
         contributors = validated_data.pop('contributors', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -43,7 +52,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
 
 class IssueSerializer(serializers.ModelSerializer):
     assignee = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.none(),
+        queryset=User.objects.none(), 
         required=False,
         allow_null=True
     )
@@ -55,6 +64,10 @@ class IssueSerializer(serializers.ModelSerializer):
         read_only_fields = ['author', 'project', 'created_time', 'updated_time']
 
     def __init__(self, *args, **kwargs):
+        """Initialise le queryset de 'assignee' en fonction du projet courant.
+        Recherche l'ID du projet dans le contexte (injecté par la vue) ou via
+        l'instance (cas PATCH), puis limite 'assignee' aux contributeurs + auteur
+        """
         super().__init__(*args, **kwargs)
         project_id = self.context.get('project')
         # Si pas de project_id dans le contexte, on récupère depuis l'instance (cas PATCH)
@@ -85,8 +98,19 @@ class IssueListSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.ReadOnlyField(source='author.username')
     issue = serializers.PrimaryKeyRelatedField(read_only=True)
+    issue_url = serializers.SerializerMethodField()
+    uid = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ['id', 'author', 'issue', 'description']
+        fields = ['id', 'author', 'issue', 'issue_url', 'uid', 'description']
         read_only_fields = ['author', 'issue', 'created_time', 'updated_time']
+
+    def get_issue_url(self, obj):
+        """Retourne l'URL de l'issue liée (absolute si request en contexte)."""
+        request = self.context.get('request')
+        return reverse('issue-detail', kwargs={'pk': obj.issue_id}, request=request)
+
+    def get_uid(self, obj):
+        """Chaîne lisible et unique: "<projet> - <issue> - <id commentaire>"."""
+        return f"{obj.issue.project.name} - {obj.issue.title} - {obj.id}"

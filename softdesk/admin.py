@@ -1,15 +1,22 @@
+"""
+Paramétrage de l'affichage dans la vue admin
+"""
 from django.contrib import admin
 from .models import Project, Issue, Comment
 
 
-class AutoAuthorAdmin(admin.ModelAdmin):
-    list_display = ('id', 'author') 
+class ProjectAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "author")
 
-    def save_model(self, request, obj, form, change):
-        if not change:
-            obj.author = request.user
-        obj.save()
 
-admin.site.register(Project, AutoAuthorAdmin)
-admin.site.register(Comment, AutoAuthorAdmin)
-admin.site.register(Issue, AutoAuthorAdmin)
+class IssueAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "project", "author")
+
+
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ("id", "issue", "author")
+
+
+admin.site.register(Project, ProjectAdmin)
+admin.site.register(Issue, IssueAdmin)
+admin.site.register(Comment, CommentAdmin)

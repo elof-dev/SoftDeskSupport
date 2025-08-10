@@ -1,3 +1,9 @@
+"""Permissions personnalisées :
+
+- IsUser: exige un utilisateur authentifié
+- IsProjectContributor: accès autorisé si auteur ou contributeur du projet lié
+- IsAuthor: modification réservée à l'auteur de l'objet uniqument
+"""
 from rest_framework import permissions
 from .models import Project, Issue, Comment
 
@@ -7,7 +13,7 @@ class IsUser(permissions.BasePermission):
         return request.user and request.user.is_authenticated
 
 class IsProjectContributor(permissions.BasePermission):
-    """Autorise l'accès si l'utilisateur est contributeur ou auteur du projet."""
+    """Autorise l'accès si l'utilisateur est contributeur ou auteur du projet"""
     def has_object_permission(self, request, view, obj):
         user = request.user
         if isinstance(obj, Project):
@@ -21,7 +27,9 @@ class IsProjectContributor(permissions.BasePermission):
         return False
 
     def has_permission(self, request, view):
-        # Pour la création d'issue/comment, vérifier la contribution au projet parent
+        """ Pour la création d'issue/comment, vérifie la contribution au projet parent
+        via les paramètres ?project= ou ?issue=
+        """
         if request.method == "POST":
             project_id = request.query_params.get('project')
             issue_id = request.query_params.get('issue')
@@ -43,6 +51,6 @@ class IsProjectContributor(permissions.BasePermission):
         return True
 
 class IsAuthor(permissions.BasePermission):
-    """Autorise uniquement l'auteur de l'objet."""
+    """Autorise uniquement l'auteur de l'objet"""
     def has_object_permission(self, request, view, obj):
         return hasattr(obj, 'author') and obj.author == request.user

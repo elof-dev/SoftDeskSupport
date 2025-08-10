@@ -6,6 +6,8 @@ class ParentLookupMixin:
       - Filtrer le queryset sur un paramètre d’URL
       - Injecter ce paramètre dans le contexte du serializer
       - Assigner le parent à la création
+    gère le lien parent-enfant via un paramètre d'URL, alimente le contexte du
+     serializer et assigne le parent à la création
     Attributs à configurer dans la ViewSet :
       url_param_name     => nom du paramètre GET (ex : 'project' ou 'issue')
       filter_field_name  => champ du modèle à filtrer (ex : 'project_id', 'issue_id')
@@ -18,6 +20,7 @@ class ParentLookupMixin:
     parent_attribute = None
 
     def get_queryset(self):
+        """Filtre le queryset si le paramètre parent est présent dans l'URL"""
         queryset = super().get_queryset()
         value = self.request.query_params.get(self.url_param_name)
         if value and self.filter_field_name:
@@ -25,11 +28,13 @@ class ParentLookupMixin:
         return queryset
 
     def get_serializer_context(self):
+        """Injecte l'identifiant du parent dans le contexte du serializer"""
         context = super().get_serializer_context()
         context[self.url_param_name] = self.request.query_params.get(self.url_param_name)
         return context
 
     def perform_create(self, serializer):
+        """Valide le parent et l'assigne à l'objet créé + force author=request.user."""
         kwargs = {}
         value = self.request.query_params.get(self.url_param_name)
         if not value:
