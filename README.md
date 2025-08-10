@@ -4,11 +4,15 @@
 2. Lancer le serveur Django
 3. Ouvrir http://localhost:8000/
 
-## Authentification
+## Suivre la documentation API.md
 
-- JWT via `/api/token/` et `/api/token/refresh/` (voir doc API)
+## BDD existante
 
-## Documentation API
+- Des utilisteurs, projets, issues et comments ont déjà été créés.
 
-- Voir `docs/API.md` pour les endpoints, exemples de requêtes, règles de permissions et erreurs courantes.
+- Users :
+    - 1 : username : admin; password : admin
+    - 2 : username : elodie; password : elodie
+    - 3 : username : thomas; password : thomas
+    - 4 : username : claire; password : claire
 
